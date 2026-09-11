@@ -2,9 +2,7 @@ from __future__ import annotations
 
 import datetime as dt
 import math
-import os
 import re
-import tempfile
 import zipfile
 from dataclasses import dataclass
 from pathlib import Path
@@ -264,105 +262,5 @@ def write_xlsx(path: str | Path, headers: list[str], rows: Iterable[list[Any]]) 
             archive.writestr(name, content.encode("utf-8"))
 
 
-def _sheet_path(archive: zipfile.ZipFile, sheet_name: str) -> str:
-    workbook = ET.fromstring(archive.read("xl/workbook.xml"))
-    rels = ET.fromstring(archive.read("xl/_rels/workbook.xml.rels"))
-    relationship_map = {
-        rel.attrib["Id"]: rel.attrib["Target"]
-        for rel in rels.findall("pr:Relationship", NS)
-    }
-    for sheet in workbook.findall("m:sheets/m:sheet", NS):
-        if sheet.attrib["name"] == sheet_name:
-            rel_id = sheet.attrib[f"{{{REL_NS}}}id"]
-            target = relationship_map[rel_id].lstrip("/")
-            return target if target.startswith("xl/") else f"xl/{target}"
-    raise ValueError(f"Không tìm thấy sheet: {sheet_name}")
 
 
-def update_status_column(
-    path: str | Path,
-    sheet_name: str,
-    statuses: dict[int, str],
-    header: str = "FORM_STATUS",
-) -> None:
-    """Patch column F in one sheet while preserving every other XLSX part."""
-    path = Path(path)
-    with zipfile.ZipFile(path, "r") as source:
-        target_sheet = _sheet_path(source, sheet_name)
-        root = ET.fromstring(source.read(target_sheet))
-        sheet_data = root.find("m:sheetData", NS)
-        if sheet_data is None:
-            raise ValueError("Sheet không có sheetData.")
-
-        def set_cell(row_number: int, text: str) -> None:
-            row = next(
-                (item for item in sheet_data.findall("m:row", NS)
-                 if int(item.attrib.get("r", "0")) == row_number),
-                None,
-            )
-            if row is None:
-                row = ET.Element(f"{{{MAIN_NS}}}row", {"r": str(row_number)})
-                inserted = False
-                for index, existing in enumerate(sheet_data.findall("m:row", NS)):
-                    if int(existing.attrib.get("r", "0")) > row_number:
-                        sheet_data.insert(index, row)
-                        inserted = True
-                        break
-                if not inserted:
-                    sheet_data.append(row)
-            reference = f"F{row_number}"
-            cell = next(
-                (item for item in row.findall("m:c", NS) if item.attrib.get("r") == reference),
-                None,
-            )
-            if cell is None:
-                cell = ET.Element(f"{{{MAIN_NS}}}c", {"r": reference})
-                inserted = False
-                for index, existing in enumerate(row.findall("m:c", NS)):
-                    if _column_index(existing.attrib.get("r", "A1")) > 6:
-                        row.insert(index, cell)
-                        inserted = True
-                        break
-                if not inserted:
-                    row.append(cell)
-            cell.attrib["t"] = "inlineStr"
-            for child in list(cell):
-                cell.remove(child)
-            inline = ET.SubElement(cell, f"{{{MAIN_NS}}}is")
-            text_node = ET.SubElement(inline, f"{{{MAIN_NS}}}t")
-            text_node.text = text
-
-        set_cell(1, header)
-        for row_number, status in statuses.items():
-            if row_number > 1:
-                set_cell(int(row_number), str(status))
-
-        dimension = root.find("m:dimension", NS)
-        if dimension is not None:
-            current = dimension.attrib.get("ref", "A1")
-            start, _, end = current.partition(":")
-            end = end or start
-            max_row_match = re.search(r"\d+", end)
-            max_row = int(max_row_match.group(0)) if max_row_match else max(statuses, default=1)
-            max_row = max(max_row, max(statuses, default=1))
-            max_col = max(6, _column_index(end))
-            dimension.attrib["ref"] = f"{start}:{_col_letter(max_col)}{max_row}"
-
-        replacement = ET.tostring(root, encoding="utf-8", xml_declaration=True)
-        temp_handle = tempfile.NamedTemporaryFile(
-            prefix=f"{path.stem}_status_", suffix=".xlsx", dir=path.parent, delete=False
-        )
-        temp_path = Path(temp_handle.name)
-        temp_handle.close()
-        try:
-            with zipfile.ZipFile(temp_path, "w", compression=zipfile.ZIP_DEFLATED) as output:
-                for info in source.infolist():
-                    if info.filename == target_sheet:
-                        output.writestr(info, replacement)
-                    else:
-                        output.writestr(info, source.read(info.filename))
-            # Windows does not allow replacing an XLSX while its ZIP handle is open.
-            source.close()
-            os.replace(temp_path, path)
-        finally:
-            temp_path.unlink(missing_ok=True)

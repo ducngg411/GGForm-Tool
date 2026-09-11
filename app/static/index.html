@@ -29,7 +29,7 @@
   <div class="grid">
     <section class="panel">
       <h2>1. Chọn file và sheet</h2>
-      <div class="notice" style="margin:0 0 12px">Khuyên dùng <b>Chọn file trực tiếp</b>: cột F sẽ được ghi ngay vào file gốc. Hãy đóng file trong Excel trước khi chạy.</div>
+      <div class="notice" style="margin:0 0 12px">Khuyên dùng <b>Chọn file trực tiếp</b> để đọc dữ liệu từ file gốc. Tool không sửa file Excel.</div>
       <div class="actions"><button id="directFileBtn">Chọn file trực tiếp</button></div>
       <div class="field" style="margin-top:14px"><label>Hoặc upload một bản sao (.xlsx)</label><input id="file" type="file" accept=".xlsx"></div>
       <div class="actions"><button id="uploadBtn" class="secondary">Upload bản sao</button></div>
@@ -75,7 +75,7 @@
       <div class="progress"><span id="progressBar"></span></div>
       <div id="jobError" class="notice error hidden"></div>
       <div class="actions"><button id="refreshBtn" class="secondary">Refresh</button><button id="cancelBtn" class="danger">Dừng job</button><button id="retryBtn" class="secondary">Chạy lại các dòng chưa SUCCESS</button><button id="exportBtn" class="secondary">Tải Excel đã ghi cột F</button></div>
-      <h2 style="margin-top:20px">Record gần nhất</h2><div id="recordsTable" class="tablebox"></div>
+      <h2 id="recordsTitle" style="margin-top:20px">Record gần nhất</h2><div id="recordsTable" class="tablebox"></div>
     </section>
   </div>
 </main>
@@ -102,7 +102,8 @@ function ruleFor(title,row=''){
   if(n.includes('cam dieu khien phuong tien sau khi su dung ruou bia'))return {label:'Cố định: Có',value:'Có'};
   if(n.includes('danh gia tinh hinh ttatgt'))return {label:'Random: Tốt / Cơ bản ổn định',value:null};
   if(n.includes('co the bi xu ly hinh su'))return {label:'Cố định: Có biết',value:'Có biết'};
-  if(n.includes('co de xuat gi'))return {label:'Để trống hoặc điền Không',value:null};
+  if(n.includes('xem clip tai nan giao thong thuc te'))return {label:'50% Rất hiệu quả · 50% Có hiệu quả',value:null};
+  if(n.includes('co de xuat gi'))return {label:'Cố định: Không',value:'Không'};
   return {label:'Random 1 option hợp lệ',value:null};
 }
 function renderFormPreview(data){
@@ -133,9 +134,9 @@ $('previewBtn').onclick=async()=>{try{const r=await api(`/api/uploads/${uploadId
 $('inspectBtn').onclick=async()=>{show($('formMsg'));msg($('formMsg'),'Đang đọc schema Form...');try{const r=await api(`/api/form/inspect?url=${encodeURIComponent($('formUrl').value)}`);msg($('formMsg'),`Form OK: ${r.question_count} câu hỏi, ${r.entry_count} entry, ${r.required_entry_count} bắt buộc. Schema ${r.schema_hash.slice(0,10)}…`,'ok');renderFormPreview(r);$('formPreviewPanel').scrollIntoView({behavior:'smooth',block:'start'})}catch(e){hide($('formPreviewPanel'));msg($('formMsg'),e.message,'error')}};
 $('startBtn').onclick=async()=>{if(!$('dryRun').checked&&!confirm('DRY-RUN đang tắt. Tool sẽ gửi dữ liệu thật vào Google Form theo tốc độ và random delay đã chọn. Tiếp tục?'))return;try{const r=await api('/api/jobs',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({upload_id:uploadId,sheet_name:$('sheet').value,form_url:$('formUrl').value,concurrency:Number($('concurrency').value),records_per_minute:Number($('recordsPerMinute').value),random_delay:$('randomDelay').checked,delay_min_seconds:Number($('delayMin').value),delay_max_seconds:Number($('delayMax').value),dry_run:$('dryRun').checked})});jobId=r.job.id;show($('jobPanel'));await refresh();pollTimer=setInterval(refresh,1500)}catch(e){alert(e.message)}};
 async function refresh(){if(!jobId)return;try{const r=await api(`/api/jobs/${jobId}`),j=r.job;$('jobStatus').textContent=j.status;$('jobStatus').className='pill '+j.status;const delay=j.random_delay?` · random ${j.delay_min_seconds}–${j.delay_max_seconds}s`:'';$('jobMeta').textContent=`Job ${j.id.slice(0,8)} · sheet ${j.sheet_name} · ${j.dry_run?'DRY-RUN':'LIVE'} · ${j.concurrency} luồng · ${j.records_per_minute} record/phút${delay}`;for(const [id,key] of [['sTotal','total'],['sProcessed','processed'],['sSuccess','success'],['sFailed','failed'],['sPhones','generated_phones']])$(id).textContent=j[key]||0;$('progressBar').style.width=(j.total?Math.round(100*j.processed/j.total):0)+'%';if(j.last_error){show($('jobError'));msg($('jobError'),j.last_error,'error')}else hide($('jobError'));await loadRecords();if(!j.active&&['COMPLETE','COMPLETE_WITH_ERRORS','DRY_RUN_COMPLETE','JOB_FAILED','CANCELED'].includes(j.status)){clearInterval(pollTimer);pollTimer=null}}catch(e){console.error(e)}}
-async function loadRecords(){const r=await api(`/api/jobs/${jobId}/records?limit=200`);const rows=r.records.slice().reverse();$('recordsTable').innerHTML=`<table><thead><tr><th>Excel row</th><th>STT</th><th>Họ và tên</th><th>SĐT gửi</th><th>Status</th><th>Attempts</th><th>Lỗi</th></tr></thead><tbody>${rows.map(x=>`<tr><td>${x.row_number}</td><td>${esc(x.source.STT||'')}</td><td>${esc(x.source['Họ và tên']||'')}</td><td>${esc(x.submitted_phone||'')}</td><td><span class="pill ${esc(x.status)}">${esc(x.status)}</span></td><td>${x.attempts}</td><td class="long" title="${esc(x.error_message||'')}">${esc(x.error_message||'')}</td></tr>`).join('')}</tbody></table>`}
+async function loadRecords(){const r=await api(`/api/jobs/${jobId}/records?limit=1000`);const rows=r.records.slice().reverse();$('recordsTitle').textContent=`Record gần nhất · ${r.records.length} record đang hiển thị`;$('recordsTable').innerHTML=`<table><thead><tr><th>Excel row</th><th>STT</th><th>Họ và tên</th><th>SĐT gửi</th><th>Status</th><th>Attempts</th><th>Lỗi</th></tr></thead><tbody>${rows.map(x=>`<tr><td>${x.row_number}</td><td>${esc(x.source.STT||'')}</td><td>${esc(x.source['Họ và tên']||'')}</td><td>${esc(x.submitted_phone||'')}</td><td><span class="pill ${esc(x.status)}">${esc(x.status)}</span></td><td>${x.attempts}</td><td class="long" title="${esc(x.error_message||'')}">${esc(x.error_message||'')}</td></tr>`).join('')}</tbody></table>`}
 $('refreshBtn').onclick=refresh;$('cancelBtn').onclick=async()=>{if(jobId&&confirm('Yêu cầu dừng job?')){await api(`/api/jobs/${jobId}/cancel`,{method:'POST'});refresh()}};
-$('retryBtn').onclick=async()=>{try{const r=await api(`/api/jobs/${jobId}/retry-failed`,{method:'POST'});jobId=r.job.id;alert(`Job mới sẽ bỏ qua dòng SUCCESS và chạy lại các dòng còn lại.`);if(!pollTimer)pollTimer=setInterval(refresh,1500);refresh()}catch(e){alert(e.message)}};
+$('retryBtn').onclick=async()=>{try{const r=await api(`/api/jobs/${jobId}/retry-failed`,{method:'POST'});jobId=r.job.id;alert(`Job mới sẽ chạy lại toàn bộ các dòng trong file.`);if(!pollTimer)pollTimer=setInterval(refresh,1500);refresh()}catch(e){alert(e.message)}};
 $('exportBtn').onclick=()=>{if(jobId)location.href=`/api/jobs/${jobId}/workbook.xlsx`};init();
 </script>
 </body>

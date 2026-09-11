@@ -7,7 +7,7 @@ from pathlib import Path
 
 from app.answer_rules import phone_for_form, resolve_form_option
 from app.worker import SubmissionRateLimiter
-from app.xlsx_io import XlsxReader, update_status_column, write_xlsx
+from app.xlsx_io import XlsxReader, write_xlsx
 
 
 class PhoneRulesTest(unittest.TestCase):
@@ -61,20 +61,6 @@ class XlsxRoundTripTest(unittest.TestCase):
             headers, rows = reader.records("Failures")
             self.assertEqual(headers, ["STT", "Họ và tên", "_error"])
             self.assertEqual(rows[0][1]["Họ và tên"], "NGUYỄN VĂN A")
-
-    def test_status_is_written_to_column_f(self) -> None:
-        with tempfile.TemporaryDirectory() as directory:
-            path = Path(directory) / "input.xlsx"
-            write_xlsx(
-                path,
-                ["STT", "Họ và tên", "Ngày sinh", "Giới tính", "SĐT"],
-                [["1", "NGUYỄN VĂN A", "01/01/1990", "Nam", "912345678"]],
-            )
-            update_status_column(path, "Failures", {2: "SUCCESS"})
-            headers, rows = XlsxReader(path).records("Failures")
-            self.assertEqual(headers[5], "FORM_STATUS")
-            self.assertEqual(rows[0][1]["FORM_STATUS"], "SUCCESS")
-
 
 if __name__ == "__main__":
     unittest.main()

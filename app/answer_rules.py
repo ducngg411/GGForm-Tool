@@ -157,13 +157,10 @@ def build_answers(
     set_random("Nguyên nhân thanh thiếu niên")
     set_random("tiếp cận thông tin giáo dục giao thông")
     set_random("Hình thức giáo dục nào dễ hiểu")
-    set_random("xem clip tai nạn giao thông thực tế")
+    set_random("xem clip tai nạn giao thông thực tế", ("Rất hiệu quả", "Có hiệu quả"))
     set_random("Nội dung giáo dục nào cần được phổ biến")
 
-    # Tài liệu cho phép bỏ trống hoặc điền "Không". Dùng hash để chạy lại không đổi.
-    proposal = schema.find("có đề xuất gì")
-    if _digest(seed, record_key, "proposal")[0] % 2:
-        fields[f"entry.{_single_entry(proposal)}"] = "Không"
+    set_fixed("có đề xuất gì", "Không")
 
     audit = {
         "record_key": record_key,

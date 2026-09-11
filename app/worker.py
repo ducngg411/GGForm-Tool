@@ -14,7 +14,7 @@ from .answer_rules import build_answers
 from .form_public import fetch_form_schema, is_confirmation_page, response_fingerprint
 from . import job_store as store
 from .settings import MAX_ATTEMPTS, REQUEST_TIMEOUT_SECONDS
-from .xlsx_io import XlsxReader, update_status_column
+from .xlsx_io import XlsxReader
 
 
 _active_jobs: set[str] = set()
@@ -76,39 +76,6 @@ def _payload(schema_hidden: dict[str, str], submission_json: str) -> dict[str, s
     payload.setdefault("pageHistory", "0")
     payload.setdefault("submissionTimestamp", "-1")
     return payload
-
-
-def _status_cell(record: dict[str, Any]) -> str:
-    status = record["status"]
-    if status in {"SUCCESS", "ALREADY_SUCCESS"}:
-        return "SUCCESS"
-    if status == "DRY_RUN_OK":
-        return "DRY_RUN_OK | CHƯA GỬI FORM"
-    if status in {"FAILED_FINAL", "PREPARE_FAILED"}:
-        code = record.get("error_code") or "ERROR"
-        message = (record.get("error_message") or "").replace("\r", " ").replace("\n", " ")
-        return f"FAILED | {code} | {message}"[:32000]
-    if status == "CANCELED":
-        return "CANCELED"
-    return status
-
-
-def _checkpoint(job_id: str, workbook_path: str, sheet_name: str) -> None:
-    records = store.get_records(job_id)
-    statuses = {
-        record["row_number"]: _status_cell(record)
-        for record in records
-        if record["status"] in {
-            "SUCCESS", "ALREADY_SUCCESS", "DRY_RUN_OK", "FAILED_FINAL",
-            "PREPARE_FAILED", "CANCELED",
-        }
-    }
-    try:
-        update_status_column(workbook_path, sheet_name, statuses)
-    except PermissionError as exc:
-        raise RuntimeError(
-            "Không ghi được cột F vì file Excel đang mở hoặc bị khóa. Hãy đóng file rồi chạy lại."
-        ) from exc
 
 
 def _submit_record(
@@ -190,16 +157,12 @@ def _prepare_records(job: dict[str, Any], schema: Any, upload: dict[str, Any]) -
     _, rows = XlsxReader(upload["stored_path"]).records(job["sheet_name"])
     records: list[dict[str, Any]] = []
     for row_number, source in rows:
-        existing = str(source.get("FORM_STATUS", "")).strip().upper()
         base = {
             "row_number": row_number, "source": source, "status": "READY", "attempts": 0,
             "generated_phone": False, "submitted_phone": None, "error_code": None,
             "error_message": None, "http_status": None, "response_url": None,
             "response_hash": None, "updated_at": store.utc_now(),
         }
-        if existing.startswith("SUCCESS"):
-            records.append({**base, "status": "ALREADY_SUCCESS"})
-            continue
         record_key = _record_key(upload["file_sha256"], job["sheet_name"], row_number, source)
         try:
             answers = build_answers(schema, source, job["job_seed"], record_key)
@@ -235,7 +198,6 @@ def run_job(job_id: str) -> None:
         store.set_job(job_id, schema_hash=schema.schema_hash)
         records = _prepare_records(job, schema, upload)
         store.set_records(job_id, records)
-        _checkpoint(job_id, upload["stored_path"], job["sheet_name"])
         if job["dry_run"]:
             store.set_job(job_id, status="DRY_RUN_COMPLETE", finished_at=store.utc_now())
             return
@@ -270,19 +232,11 @@ def run_job(job_id: str) -> None:
                     ): record["row_number"]
                     for record in ready
                 }
-                completed_since_checkpoint = 0
-                last_checkpoint = time.monotonic()
                 for future in as_completed(future_map):
                     result = future.result()
                     store.update_record(job_id, result["row_number"], **{
                         key: value for key, value in result.items() if key != "row_number"
                     })
-                    completed_since_checkpoint += 1
-                    if completed_since_checkpoint >= 10 or time.monotonic() - last_checkpoint >= 2:
-                        _checkpoint(job_id, upload["stored_path"], job["sheet_name"])
-                        completed_since_checkpoint = 0
-                        last_checkpoint = time.monotonic()
-        _checkpoint(job_id, upload["stored_path"], job["sheet_name"])
         final = store.refresh(job_id)
         status = "COMPLETE_WITH_ERRORS" if final and final["failed"] else "COMPLETE"
         if store.get_job(job_id)["status"] == "CANCEL_REQUESTED":

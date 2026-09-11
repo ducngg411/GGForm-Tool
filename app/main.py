@@ -49,7 +49,10 @@ def startup() -> None:
 
 @app.get("/")
 def index() -> FileResponse:
-    return FileResponse(Path(__file__).parent / "static" / "index.html")
+    return FileResponse(
+        Path(__file__).parent / "static" / "index.html",
+        headers={"Cache-Control": "no-store, no-cache, must-revalidate"},
+    )
 
 
 @app.get("/api/config")
@@ -92,7 +95,7 @@ async def upload_workbook(file: UploadFile = File(...)) -> dict[str, object]:
 
 @app.post("/api/local-files/select")
 async def select_local_workbook() -> dict[str, object]:
-    """Open the native Windows picker and register the original XLSX for in-place updates."""
+    """Open the native Windows picker and register the original XLSX for reading."""
     try:
         import tkinter as tk
         from tkinter import filedialog
@@ -102,7 +105,7 @@ async def select_local_workbook() -> dict[str, object]:
         root.attributes("-topmost", True)
         selected = filedialog.askopenfilename(
             parent=root,
-            title="Chọn file Excel để ghi trạng thái trực tiếp",
+            title="Chọn file Excel để đọc dữ liệu",
             filetypes=[("Excel workbook", "*.xlsx")],
         )
         root.destroy()

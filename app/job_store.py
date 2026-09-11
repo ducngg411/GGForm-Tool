@@ -126,11 +126,11 @@ def update_record(job_id: str, row_number: int, **values: Any) -> None:
 
 def _refresh_locked(job: dict[str, Any]) -> None:
     records = job["records"]
-    terminal = {"SUCCESS", "DRY_RUN_OK", "FAILED_FINAL", "PREPARE_FAILED", "ALREADY_SUCCESS", "CANCELED"}
+    terminal = {"SUCCESS", "DRY_RUN_OK", "FAILED_FINAL", "PREPARE_FAILED", "CANCELED"}
     job["total"] = len(records)
     job["processed"] = sum(record["status"] in terminal for record in records)
     job["success"] = sum(
-        record["status"] in {"SUCCESS", "DRY_RUN_OK", "ALREADY_SUCCESS"} for record in records
+        record["status"] in {"SUCCESS", "DRY_RUN_OK"} for record in records
     )
     job["failed"] = sum(record["status"] in {"FAILED_FINAL", "PREPARE_FAILED"} for record in records)
     job["generated_phones"] = sum(bool(record.get("generated_phone")) for record in records)
