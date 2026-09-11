@@ -1,143 +1,863 @@
 <!doctype html>
 <html lang="vi">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>HVCS Form Runner</title>
-  <style>
-    :root{--bg:#f4f7fb;--panel:#fff;--ink:#172033;--muted:#667085;--line:#dce3ec;--blue:#2257d7;--green:#087a55;--red:#c93434;--amber:#9b6300}
-    *{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 Inter,Segoe UI,Arial,sans-serif}
-    .wrap{max-width:1180px;margin:32px auto;padding:0 20px}.head{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:20px}
-    h1{font-size:25px;margin:0 0 4px} h2{font-size:16px;margin:0 0 16px}.muted{color:var(--muted)}
-    .grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}.panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px;box-shadow:0 3px 16px #1720330a}
-    .wide{grid-column:1/-1}.row{display:flex;gap:12px;align-items:end;flex-wrap:wrap}.field{display:flex;flex:1;min-width:180px;flex-direction:column;gap:6px}
-    label{font-weight:650;font-size:13px}input,select,button{font:inherit;border-radius:8px}input[type=text],input[type=file],input[type=number],select{width:100%;padding:10px 11px;border:1px solid var(--line);background:#fff}
-    button{border:0;padding:10px 15px;background:var(--blue);color:#fff;font-weight:700;cursor:pointer}button.secondary{background:#eef2f8;color:#24324a}button.danger{background:#feecec;color:var(--red)}button:disabled{opacity:.5;cursor:not-allowed}
-    .check{display:flex;gap:8px;align-items:center;padding:9px 0}.check label{font-weight:500}.notice{padding:10px 12px;border-radius:8px;background:#eef5ff;color:#234278;margin-top:12px}.error{background:#fff0f0;color:#9e2020}.ok{background:#eaf8f1;color:#086c4b}
-    .stats{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin:14px 0}.stat{padding:12px;border:1px solid var(--line);border-radius:10px}.stat b{display:block;font-size:21px}.stat small{color:var(--muted)}
-    .progress{height:10px;background:#e9edf3;border-radius:20px;overflow:hidden}.progress span{display:block;height:100%;background:linear-gradient(90deg,#2257d7,#39a0ff);width:0;transition:width .4s}
-    .tablebox{overflow:auto;border:1px solid var(--line);border-radius:10px;max-height:440px}table{border-collapse:collapse;width:100%;min-width:760px}th,td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--line);white-space:nowrap}th{position:sticky;top:0;background:#f7f9fc;font-size:12px;z-index:1}td.long{max-width:330px;overflow:hidden;text-overflow:ellipsis}
-    .pill{display:inline-block;border-radius:999px;padding:3px 8px;font-size:11px;font-weight:700;background:#eef2f8}.pill.SUCCESS,.pill.DRY_RUN_OK{background:#e6f7ef;color:var(--green)}.pill.FAILED_FINAL,.pill.PREPARE_FAILED{background:#fdeaea;color:var(--red)}
-    .form-preview{display:grid;gap:12px}.qcard{border:1px solid var(--line);border-radius:12px;padding:16px;background:#fff}.qhead{display:flex;gap:10px;justify-content:space-between;align-items:flex-start}.qtitle{font-weight:700}.req{color:var(--red)}.qmeta{font-size:11px;color:var(--muted);margin-top:4px}.rule{display:inline-block;margin:10px 0 8px;padding:5px 9px;border-radius:7px;background:#edf4ff;color:#234eaa;font-size:12px;font-weight:700}.fake-input{border-bottom:1px solid #aeb8c6;color:var(--muted);padding:8px 2px;max-width:420px}.choices{display:grid;gap:7px}.choice{display:flex;gap:8px;align-items:center}.dot{width:15px;height:15px;border:1.5px solid #7c8798;border-radius:50%;display:inline-block}.dot.on{border:5px solid var(--blue)}.dropdown-options{max-height:220px;overflow:auto;padding:8px 12px;border:1px solid var(--line);border-radius:8px;margin-top:6px}.dropdown-options div{padding:4px 0}.grid-preview{overflow:auto}.grid-preview table{min-width:620px}.grid-preview th:not(:first-child),.grid-preview td:not(:first-child){text-align:center}.grid-preview .rowrule{display:block;font-size:10px;color:#315dab;margin-top:2px}.form-summary{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
-    .actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}.hidden{display:none!important}
-    @media(max-width:800px){.grid{grid-template-columns:1fr}.wide{grid-column:auto}.stats{grid-template-columns:repeat(2,1fr)}}
-  </style>
-</head>
-<body>
-<main class="wrap">
-  <div class="head"><div><h1>HVCS Form Runner</h1><div class="muted">Excel → Google Form public · theo dõi từng record</div></div><span class="pill">LOCAL ONLY</span></div>
-  <div class="grid">
-    <section class="panel">
-      <h2>1. Chọn file và sheet</h2>
-      <div class="notice" style="margin:0 0 12px">Khuyên dùng <b>Chọn file trực tiếp</b> để đọc dữ liệu từ file gốc. Tool không sửa file Excel.</div>
-      <div class="actions"><button id="directFileBtn">Chọn file trực tiếp</button></div>
-      <div class="field" style="margin-top:14px"><label>Hoặc upload một bản sao (.xlsx)</label><input id="file" type="file" accept=".xlsx"></div>
-      <div class="actions"><button id="uploadBtn" class="secondary">Upload bản sao</button></div>
-      <div id="uploadMsg" class="notice hidden"></div>
-      <div id="sheetArea" class="hidden" style="margin-top:14px">
-        <div class="field"><label>Sheet cần process</label><select id="sheet"></select></div>
-        <div class="actions"><button id="previewBtn" class="secondary">Xem trước dữ liệu</button></div>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>HVCS Form Runner</title>
+    <style>
+      :root {
+        --bg: #f4f7fb;
+        --panel: #fff;
+        --ink: #172033;
+        --muted: #667085;
+        --line: #dce3ec;
+        --blue: #2257d7;
+        --green: #087a55;
+        --red: #c93434;
+        --amber: #9b6300;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--ink);
+        font:
+          14px/1.5 Inter,
+          Segoe UI,
+          Arial,
+          sans-serif;
+      }
+      .wrap {
+        max-width: 1180px;
+        margin: 32px auto;
+        padding: 0 20px;
+      }
+      .head {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-end;
+        margin-bottom: 20px;
+      }
+      h1 {
+        font-size: 25px;
+        margin: 0 0 4px;
+      }
+      h2 {
+        font-size: 16px;
+        margin: 0 0 16px;
+      }
+      .muted {
+        color: var(--muted);
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+      }
+      .panel {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        padding: 20px;
+        box-shadow: 0 3px 16px #1720330a;
+      }
+      .wide {
+        grid-column: 1/-1;
+      }
+      .row {
+        display: flex;
+        gap: 12px;
+        align-items: end;
+        flex-wrap: wrap;
+      }
+      .field {
+        display: flex;
+        flex: 1;
+        min-width: 180px;
+        flex-direction: column;
+        gap: 6px;
+      }
+      label {
+        font-weight: 650;
+        font-size: 13px;
+      }
+      input,
+      select,
+      button {
+        font: inherit;
+        border-radius: 8px;
+      }
+      input[type="text"],
+      input[type="file"],
+      input[type="number"],
+      select {
+        width: 100%;
+        padding: 10px 11px;
+        border: 1px solid var(--line);
+        background: #fff;
+      }
+      button {
+        border: 0;
+        padding: 10px 15px;
+        background: var(--blue);
+        color: #fff;
+        font-weight: 700;
+        cursor: pointer;
+      }
+      button.secondary {
+        background: #eef2f8;
+        color: #24324a;
+      }
+      button.danger {
+        background: #feecec;
+        color: var(--red);
+      }
+      button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+      .check {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        padding: 9px 0;
+      }
+      .check label {
+        font-weight: 500;
+      }
+      .notice {
+        padding: 10px 12px;
+        border-radius: 8px;
+        background: #eef5ff;
+        color: #234278;
+        margin-top: 12px;
+      }
+      .error {
+        background: #fff0f0;
+        color: #9e2020;
+      }
+      .ok {
+        background: #eaf8f1;
+        color: #086c4b;
+      }
+      .stats {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 10px;
+        margin: 14px 0;
+      }
+      .stat {
+        padding: 12px;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+      }
+      .stat b {
+        display: block;
+        font-size: 21px;
+      }
+      .stat small {
+        color: var(--muted);
+      }
+      .progress {
+        height: 10px;
+        background: #e9edf3;
+        border-radius: 20px;
+        overflow: hidden;
+      }
+      .progress span {
+        display: block;
+        height: 100%;
+        background: linear-gradient(90deg, #2257d7, #39a0ff);
+        width: 0;
+        transition: width 0.4s;
+      }
+      .tablebox {
+        overflow: auto;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        max-height: 440px;
+      }
+      table {
+        border-collapse: collapse;
+        width: 100%;
+        min-width: 760px;
+      }
+      th,
+      td {
+        text-align: left;
+        padding: 9px 10px;
+        border-bottom: 1px solid var(--line);
+        white-space: nowrap;
+      }
+      th {
+        position: sticky;
+        top: 0;
+        background: #f7f9fc;
+        font-size: 12px;
+        z-index: 1;
+      }
+      td.long {
+        max-width: 330px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .pill {
+        display: inline-block;
+        border-radius: 999px;
+        padding: 3px 8px;
+        font-size: 11px;
+        font-weight: 700;
+        background: #eef2f8;
+      }
+      .pill.SUCCESS,
+      .pill.DRY_RUN_OK {
+        background: #e6f7ef;
+        color: var(--green);
+      }
+      .pill.FAILED_FINAL,
+      .pill.PREPARE_FAILED {
+        background: #fdeaea;
+        color: var(--red);
+      }
+      .form-preview {
+        display: grid;
+        gap: 12px;
+      }
+      .qcard {
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 16px;
+        background: #fff;
+      }
+      .qhead {
+        display: flex;
+        gap: 10px;
+        justify-content: space-between;
+        align-items: flex-start;
+      }
+      .qtitle {
+        font-weight: 700;
+      }
+      .req {
+        color: var(--red);
+      }
+      .qmeta {
+        font-size: 11px;
+        color: var(--muted);
+        margin-top: 4px;
+      }
+      .rule {
+        display: inline-block;
+        margin: 10px 0 8px;
+        padding: 5px 9px;
+        border-radius: 7px;
+        background: #edf4ff;
+        color: #234eaa;
+        font-size: 12px;
+        font-weight: 700;
+      }
+      .fake-input {
+        border-bottom: 1px solid #aeb8c6;
+        color: var(--muted);
+        padding: 8px 2px;
+        max-width: 420px;
+      }
+      .choices {
+        display: grid;
+        gap: 7px;
+      }
+      .choice {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+      }
+      .dot {
+        width: 15px;
+        height: 15px;
+        border: 1.5px solid #7c8798;
+        border-radius: 50%;
+        display: inline-block;
+      }
+      .dot.on {
+        border: 5px solid var(--blue);
+      }
+      .dropdown-options {
+        max-height: 220px;
+        overflow: auto;
+        padding: 8px 12px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        margin-top: 6px;
+      }
+      .dropdown-options div {
+        padding: 4px 0;
+      }
+      .grid-preview {
+        overflow: auto;
+      }
+      .grid-preview table {
+        min-width: 620px;
+      }
+      .grid-preview th:not(:first-child),
+      .grid-preview td:not(:first-child) {
+        text-align: center;
+      }
+      .grid-preview .rowrule {
+        display: block;
+        font-size: 10px;
+        color: #315dab;
+        margin-top: 2px;
+      }
+      .form-summary {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin-bottom: 14px;
+      }
+      .actions {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin-top: 14px;
+      }
+      .hidden {
+        display: none !important;
+      }
+      @media (max-width: 800px) {
+        .grid {
+          grid-template-columns: 1fr;
+        }
+        .wide {
+          grid-column: auto;
+        }
+        .stats {
+          grid-template-columns: repeat(2, 1fr);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="wrap">
+      <div class="head">
+        <div>
+          <h1>HVCS Form Runner</h1>
+          <div class="muted">
+            Excel → Google Form public · theo dõi từng record
+          </div>
+        </div>
+        <span class="pill">LOCAL ONLY</span>
       </div>
-    </section>
-    <section class="panel">
-      <h2>2. Cấu hình chạy</h2>
-      <div class="field"><label>Google Form URL</label><input id="formUrl" type="text"></div>
-      <div class="row" style="margin-top:10px">
-        <div class="field"><label>Số luồng</label><input id="concurrency" type="number" min="1" max="10" value="3"></div>
-        <div class="field"><label>Tốc độ gửi (record/phút)</label><input id="recordsPerMinute" type="number" min="1" max="600" value="10"></div>
-        <div class="field"><label>Kiểm tra Form</label><button id="inspectBtn" class="secondary">Đọc schema</button></div>
+      <div class="grid">
+        <section class="panel">
+          <h2>1. Chọn file và sheet</h2>
+          <div class="notice" style="margin: 0 0 12px">
+            Khuyên dùng <b>Chọn file trực tiếp</b> để đọc dữ liệu từ file gốc.
+            Tool không sửa file Excel.
+          </div>
+          <div class="actions">
+            <button id="directFileBtn">Chọn file trực tiếp</button>
+          </div>
+          <div class="field" style="margin-top: 14px">
+            <label>Hoặc upload một bản sao (.xlsx)</label
+            ><input id="file" type="file" accept=".xlsx" />
+          </div>
+          <div class="actions">
+            <button id="uploadBtn" class="secondary">Upload bản sao</button>
+          </div>
+          <div id="uploadMsg" class="notice hidden"></div>
+          <div id="sheetArea" class="hidden" style="margin-top: 14px">
+            <div class="field">
+              <label>Sheet cần process</label
+              ><select id="sheet"></select>
+            </div>
+            <div class="actions">
+              <button id="previewBtn" class="secondary">
+                Xem trước dữ liệu
+              </button>
+            </div>
+          </div>
+        </section>
+        <section class="panel">
+          <h2>2. Cấu hình chạy</h2>
+          <div class="field">
+            <label>Google Form URL</label><input id="formUrl" type="text" />
+          </div>
+          <div class="row" style="margin-top: 10px">
+            <div class="field">
+              <label>Số luồng</label
+              ><input
+                id="concurrency"
+                type="number"
+                min="1"
+                max="10"
+                value="3"
+              />
+            </div>
+            <div class="field">
+              <label>Tốc độ gửi (record/phút)</label
+              ><input
+                id="recordsPerMinute"
+                type="number"
+                min="1"
+                max="600"
+                value="10"
+              />
+            </div>
+            <div class="field">
+              <label>Kiểm tra Form</label
+              ><button id="inspectBtn" class="secondary">Đọc schema</button>
+            </div>
+          </div>
+          <div id="speedHint" class="muted" style="margin-top: 8px">
+            10 record/phút = một lượt gửi mỗi 6 giây.
+          </div>
+          <div class="check">
+            <input id="randomDelay" type="checkbox" checked /><label
+              for="randomDelay"
+              >Random thời gian giữa các record</label
+            >
+          </div>
+          <div id="randomDelayFields" class="row">
+            <div class="field">
+              <label>Random tối thiểu (giây)</label
+              ><input
+                id="delayMin"
+                type="number"
+                min="0"
+                max="30"
+                step="0.5"
+                value="5"
+              />
+            </div>
+            <div class="field">
+              <label>Random tối đa (giây)</label
+              ><input
+                id="delayMax"
+                type="number"
+                min="0"
+                max="30"
+                step="0.5"
+                value="30"
+              />
+            </div>
+          </div>
+          <div class="check">
+            <input id="dryRun" type="checkbox" checked /><label for="dryRun"
+              ><b>Dry-run — CHƯA GỬI FORM</b>, chỉ dựng và kiểm tra
+              payload</label
+            >
+          </div>
+          <div id="formMsg" class="notice hidden"></div>
+          <div class="actions">
+            <button id="startBtn" disabled>Kiểm tra payload — không gửi</button>
+          </div>
+        </section>
+        <section id="previewPanel" class="panel wide hidden">
+          <h2>Preview Excel</h2>
+          <div id="previewMeta" class="muted" style="margin-bottom: 10px"></div>
+          <div id="previewTable" class="tablebox"></div>
+        </section>
+        <section id="formPreviewPanel" class="panel wide hidden">
+          <h2>Preview Google Form và rule điền</h2>
+          <div id="formPreviewMeta" class="form-summary"></div>
+          <div id="formPreview" class="form-preview"></div>
+        </section>
+        <section id="jobPanel" class="panel wide hidden">
+          <div
+            class="row"
+            style="justify-content: space-between; align-items: center"
+          >
+            <div>
+              <h2 style="margin-bottom: 3px">Trạng thái job</h2>
+              <div id="jobMeta" class="muted"></div>
+            </div>
+            <span id="jobStatus" class="pill"></span>
+          </div>
+          <div class="stats">
+            <div class="stat"><b id="sTotal">0</b><small>Tổng</small></div>
+            <div class="stat">
+              <b id="sProcessed">0</b><small>Đã xử lý</small>
+            </div>
+            <div class="stat">
+              <b id="sSuccess">0</b><small>Success hoặc kiểm tra OK</small>
+            </div>
+            <div class="stat"><b id="sFailed">0</b><small>Fail</small></div>
+            <div class="stat">
+              <b id="sPhones">0</b><small>SĐT sinh tự động</small>
+            </div>
+          </div>
+          <div class="progress"><span id="progressBar"></span></div>
+          <div id="jobError" class="notice error hidden"></div>
+          <div class="actions">
+            <button id="refreshBtn" class="secondary">Refresh</button
+            ><button id="cancelBtn" class="danger">Dừng job</button
+            ><button id="retryBtn" class="secondary">
+              Chạy lại các dòng chưa SUCCESS</button
+            ><button id="exportBtn" class="secondary">
+              Tải Excel đã ghi cột F
+            </button>
+          </div>
+          <h2 id="recordsTitle" style="margin-top: 20px">Record gần nhất</h2>
+          <div id="recordsTable" class="tablebox"></div>
+        </section>
       </div>
-      <div id="speedHint" class="muted" style="margin-top:8px">10 record/phút = một lượt gửi mỗi 6 giây.</div>
-      <div class="check"><input id="randomDelay" type="checkbox" checked><label for="randomDelay">Random thời gian giữa các record</label></div>
-      <div id="randomDelayFields" class="row">
-        <div class="field"><label>Random tối thiểu (giây)</label><input id="delayMin" type="number" min="0" max="30" step="0.5" value="5"></div>
-        <div class="field"><label>Random tối đa (giây)</label><input id="delayMax" type="number" min="0" max="30" step="0.5" value="30"></div>
-      </div>
-      <div class="check"><input id="dryRun" type="checkbox" checked><label for="dryRun"><b>Dry-run — CHƯA GỬI FORM</b>, chỉ dựng và kiểm tra payload</label></div>
-      <div id="formMsg" class="notice hidden"></div>
-      <div class="actions"><button id="startBtn" disabled>Kiểm tra payload — không gửi</button></div>
-    </section>
-    <section id="previewPanel" class="panel wide hidden">
-      <h2>Preview Excel</h2><div id="previewMeta" class="muted" style="margin-bottom:10px"></div><div id="previewTable" class="tablebox"></div>
-    </section>
-    <section id="formPreviewPanel" class="panel wide hidden">
-      <h2>Preview Google Form và rule điền</h2>
-      <div id="formPreviewMeta" class="form-summary"></div>
-      <div id="formPreview" class="form-preview"></div>
-    </section>
-    <section id="jobPanel" class="panel wide hidden">
-      <div class="row" style="justify-content:space-between;align-items:center"><div><h2 style="margin-bottom:3px">Trạng thái job</h2><div id="jobMeta" class="muted"></div></div><span id="jobStatus" class="pill"></span></div>
-      <div class="stats">
-        <div class="stat"><b id="sTotal">0</b><small>Tổng</small></div><div class="stat"><b id="sProcessed">0</b><small>Đã xử lý</small></div>
-        <div class="stat"><b id="sSuccess">0</b><small>Success hoặc kiểm tra OK</small></div><div class="stat"><b id="sFailed">0</b><small>Fail</small></div>
-        <div class="stat"><b id="sPhones">0</b><small>SĐT sinh tự động</small></div>
-      </div>
-      <div class="progress"><span id="progressBar"></span></div>
-      <div id="jobError" class="notice error hidden"></div>
-      <div class="actions"><button id="refreshBtn" class="secondary">Refresh</button><button id="cancelBtn" class="danger">Dừng job</button><button id="retryBtn" class="secondary">Chạy lại các dòng chưa SUCCESS</button><button id="exportBtn" class="secondary">Tải Excel đã ghi cột F</button></div>
-      <h2 id="recordsTitle" style="margin-top:20px">Record gần nhất</h2><div id="recordsTable" class="tablebox"></div>
-    </section>
-  </div>
-</main>
-<script>
-let uploadId=null, jobId=null, pollTimer=null;
-const $=id=>document.getElementById(id);
-function msg(el,text,kind=''){el.textContent=text;el.className='notice '+kind}
-function hide(el){el.classList.add('hidden')} function show(el){el.classList.remove('hidden')}
-function esc(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
-function norm(v){return String(v||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/đ/g,'d').replace(/Đ/g,'D').replace(/\s+/g,' ').trim().toLowerCase()}
-function ruleFor(title,row=''){
-  const n=norm(title),r=norm(row);
-  if(n.includes('ho va ten'))return {label:'Excel → Họ và tên',value:null};
-  if(n.includes('nam sinh'))return {label:'Excel → Ngày sinh',value:null};
-  if(n.includes('nghe nghiep'))return {label:'Cố định: Tự do',value:'Tự do'};
-  if(n.includes('phuong tien thuong su dung'))return {label:'Cố định: Xe máy',value:'Xe máy'};
-  if(n.includes('don vi to chuc'))return {label:'Cố định: phường Thành Nam',value:'phường Thành Nam'};
-  if(n.includes('sdt nguoi duoc khao sat'))return {label:'Excel → SĐT; lỗi thì sinh SĐT random',value:null};
-  if(n.includes('nam duoc quy dinh'))return {label:'Cố định: Biết rõ',value:'Biết rõ'};
-  if(n.includes('thuong xuyen thuc hien cac noi dung')){
-    if(r.includes('quan sat, bat tin hieu'))return {label:'80% Thường xuyên · 20% Thỉnh thoảng',value:null};
-    return {label:'Cố định: Thường xuyên',value:'Thường xuyên'};
-  }
-  if(n.includes('cam dieu khien phuong tien sau khi su dung ruou bia'))return {label:'Cố định: Có',value:'Có'};
-  if(n.includes('danh gia tinh hinh ttatgt'))return {label:'Random: Tốt / Cơ bản ổn định',value:null};
-  if(n.includes('co the bi xu ly hinh su'))return {label:'Cố định: Có biết',value:'Có biết'};
-  if(n.includes('xem clip tai nan giao thong thuc te'))return {label:'50% Rất hiệu quả · 50% Có hiệu quả',value:null};
-  if(n.includes('co de xuat gi'))return {label:'Cố định: Không',value:'Không'};
-  return {label:'Random 1 option hợp lệ',value:null};
-}
-function renderFormPreview(data){
-  $('formPreviewMeta').innerHTML=`<span class="pill">${data.question_count} câu hỏi</span><span class="pill">${data.entry_count} entry</span><span class="pill">${data.required_entry_count} bắt buộc</span><span class="pill">Schema ${esc(data.schema_hash.slice(0,12))}…</span>`;
-  $('formPreview').innerHTML=data.questions.map((q,index)=>{
-    const required=q.entries.some(e=>e.required),baseRule=ruleFor(q.title),entryIds=q.entries.map(e=>`entry.${e.id}`).join(', ');
-    let body='';
-    if(q.type===0||q.type===1){body=`<div class="rule">${esc(baseRule.label)}</div><div class="fake-input">${esc(baseRule.value||'Giá trị sẽ được dựng theo từng record')}</div>`}
-    else if(q.type===3){const options=q.entries[0]?.options||[];body=`<div class="rule">${esc(baseRule.label)}</div><details><summary>${esc(baseRule.value||'Xem danh sách option')}</summary><div class="dropdown-options">${options.map(o=>`<div>${baseRule.value&&norm(o)===norm(baseRule.value)?'✓ ':''}${esc(o)}</div>`).join('')}</div></details>`}
-    else if(q.type===2){const options=q.entries[0]?.options||[];body=`<div class="rule">${esc(baseRule.label)}</div><div class="choices">${options.map(o=>`<div class="choice"><span class="dot ${baseRule.value&&norm(o)===norm(baseRule.value)?'on':''}"></span><span>${esc(o)}</span></div>`).join('')}</div>`}
-    else if(q.type===7){const options=q.entries[0]?.options||[];body=`<div class="grid-preview"><table><thead><tr><th>Nội dung</th>${options.map(o=>`<th>${esc(o)}</th>`).join('')}</tr></thead><tbody>${q.entries.map(e=>{const rr=ruleFor(q.title,e.row_label);return `<tr><td>${esc(e.row_label)}<span class="rowrule">${esc(rr.label)}</span></td>${e.options.map(o=>`<td><span class="dot ${rr.value&&norm(o)===norm(rr.value)?'on':''}"></span></td>`).join('')}</tr>`}).join('')}</tbody></table></div>`}
-    else body=`<div class="rule">${esc(baseRule.label)}</div>`;
-    return `<article class="qcard"><div class="qhead"><div><div class="qtitle">${index+1}. ${esc(q.title)} ${required?'<span class="req">*</span>':''}</div><div class="qmeta">type ${q.type} · ${esc(entryIds)}</div></div><span class="pill">${q.entries.length} entry</span></div>${body}</article>`
-  }).join('');show($('formPreviewPanel'));
-}
-async function api(url,options={}){const r=await fetch(url,options);let body={};try{body=await r.json()}catch{}if(!r.ok)throw new Error(body.detail||`HTTP ${r.status}`);return body}
-async function init(){const c=await api('/api/config');$('formUrl').value=c.default_form_url;$('concurrency').value=c.default_concurrency;$('recordsPerMinute').value=c.default_records_per_minute;syncSpeedHint()}
-function syncRunButton(){if($('dryRun').checked){$('startBtn').textContent='Kiểm tra payload — không gửi';$('startBtn').classList.remove('danger')}else{$('startBtn').textContent='Gửi câu trả lời thật';$('startBtn').classList.add('danger')}}
-$('dryRun').onchange=syncRunButton;syncRunButton();
-function syncSpeedHint(){const rpm=Math.max(1,Number($('recordsPerMinute').value)||1),base=60/rpm,option=$('sheet').selectedOptions[0],rows=option?Number(option.dataset.rows):0,randomOn=$('randomDelay').checked,min=Math.max(0,Number($('delayMin').value)||0),max=Math.max(min,Number($('delayMax').value)||0),average=randomOn?Math.max(base,(min+max)/2):base,duration=rows*average/60;let estimate='';if(rows){estimate=` Ước tính khoảng ${duration<1?Math.ceil(duration*60)+' giây':duration.toFixed(1)+' phút'} cho ${rows} record.`}const interval=randomOn?`random ${Math.max(base,min).toFixed(1)}–${Math.max(base,max).toFixed(1)} giây`:`mỗi ${base.toFixed(base<1?2:1)} giây`;$('speedHint').textContent=`Tối đa ${rpm} record/phút; khoảng gửi thực tế ${interval}.${estimate}`}
-function syncRandomDelay(){$('randomDelayFields').classList.toggle('hidden',!$('randomDelay').checked);syncSpeedHint()}
-$('recordsPerMinute').oninput=syncSpeedHint;$('sheet').onchange=syncSpeedHint;$('randomDelay').onchange=syncRandomDelay;$('delayMin').oninput=syncSpeedHint;$('delayMax').oninput=syncSpeedHint;syncRandomDelay();
-function useWorkbook(r){uploadId=r.upload.id;$('sheet').innerHTML=r.sheets.map(s=>`<option value="${esc(s.name)}" data-rows="${Math.max(0,s.max_row-1)}">${esc(s.name)} — ${s.max_row-1} dòng</option>`).join('');show($('sheetArea'));$('startBtn').disabled=false;syncSpeedHint();const target=r.upload.direct_file?`File gốc: ${r.upload.local_path}`:`Bản upload: ${r.upload.original_name}`;msg($('uploadMsg'),`${target} · ${r.sheets.length} sheet.`,'ok')}
-$('directFileBtn').onclick=async()=>{show($('uploadMsg'));msg($('uploadMsg'),'Đang mở hộp thoại Windows...');try{const r=await api('/api/local-files/select',{method:'POST'});useWorkbook(r)}catch(e){msg($('uploadMsg'),e.message,'error')}};
-$('uploadBtn').onclick=async()=>{const f=$('file').files[0];if(!f)return msg($('uploadMsg'),'Chọn file .xlsx trước.','error');show($('uploadMsg'));msg($('uploadMsg'),'Đang upload bản sao...');
-  try{const fd=new FormData();fd.append('file',f);const r=await api('/api/uploads',{method:'POST',body:fd});useWorkbook(r)}catch(e){msg($('uploadMsg'),e.message,'error')}};
-$('previewBtn').onclick=async()=>{try{const r=await api(`/api/uploads/${uploadId}/preview?sheet=${encodeURIComponent($('sheet').value)}&limit=10`);$('previewMeta').textContent=`${r.total} record · hiển thị 10 dòng đầu`;const headers=['_row',...r.headers];$('previewTable').innerHTML=`<table><thead><tr>${headers.map(h=>`<th>${esc(h)}</th>`).join('')}</tr></thead><tbody>${r.rows.map(row=>`<tr>${headers.map(h=>`<td>${esc(h==='_row'?row.row_number:row[h])}</td>`).join('')}</tr>`).join('')}</tbody></table>`;show($('previewPanel'))}catch(e){alert(e.message)}};
-$('inspectBtn').onclick=async()=>{show($('formMsg'));msg($('formMsg'),'Đang đọc schema Form...');try{const r=await api(`/api/form/inspect?url=${encodeURIComponent($('formUrl').value)}`);msg($('formMsg'),`Form OK: ${r.question_count} câu hỏi, ${r.entry_count} entry, ${r.required_entry_count} bắt buộc. Schema ${r.schema_hash.slice(0,10)}…`,'ok');renderFormPreview(r);$('formPreviewPanel').scrollIntoView({behavior:'smooth',block:'start'})}catch(e){hide($('formPreviewPanel'));msg($('formMsg'),e.message,'error')}};
-$('startBtn').onclick=async()=>{if(!$('dryRun').checked&&!confirm('DRY-RUN đang tắt. Tool sẽ gửi dữ liệu thật vào Google Form theo tốc độ và random delay đã chọn. Tiếp tục?'))return;try{const r=await api('/api/jobs',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({upload_id:uploadId,sheet_name:$('sheet').value,form_url:$('formUrl').value,concurrency:Number($('concurrency').value),records_per_minute:Number($('recordsPerMinute').value),random_delay:$('randomDelay').checked,delay_min_seconds:Number($('delayMin').value),delay_max_seconds:Number($('delayMax').value),dry_run:$('dryRun').checked})});jobId=r.job.id;show($('jobPanel'));await refresh();pollTimer=setInterval(refresh,1500)}catch(e){alert(e.message)}};
-async function refresh(){if(!jobId)return;try{const r=await api(`/api/jobs/${jobId}`),j=r.job;$('jobStatus').textContent=j.status;$('jobStatus').className='pill '+j.status;const delay=j.random_delay?` · random ${j.delay_min_seconds}–${j.delay_max_seconds}s`:'';$('jobMeta').textContent=`Job ${j.id.slice(0,8)} · sheet ${j.sheet_name} · ${j.dry_run?'DRY-RUN':'LIVE'} · ${j.concurrency} luồng · ${j.records_per_minute} record/phút${delay}`;for(const [id,key] of [['sTotal','total'],['sProcessed','processed'],['sSuccess','success'],['sFailed','failed'],['sPhones','generated_phones']])$(id).textContent=j[key]||0;$('progressBar').style.width=(j.total?Math.round(100*j.processed/j.total):0)+'%';if(j.last_error){show($('jobError'));msg($('jobError'),j.last_error,'error')}else hide($('jobError'));await loadRecords();if(!j.active&&['COMPLETE','COMPLETE_WITH_ERRORS','DRY_RUN_COMPLETE','JOB_FAILED','CANCELED'].includes(j.status)){clearInterval(pollTimer);pollTimer=null}}catch(e){console.error(e)}}
-async function loadRecords(){const r=await api(`/api/jobs/${jobId}/records?limit=1000`);const rows=r.records.slice().reverse();$('recordsTitle').textContent=`Record gần nhất · ${r.records.length} record đang hiển thị`;$('recordsTable').innerHTML=`<table><thead><tr><th>Excel row</th><th>STT</th><th>Họ và tên</th><th>SĐT gửi</th><th>Status</th><th>Attempts</th><th>Lỗi</th></tr></thead><tbody>${rows.map(x=>`<tr><td>${x.row_number}</td><td>${esc(x.source.STT||'')}</td><td>${esc(x.source['Họ và tên']||'')}</td><td>${esc(x.submitted_phone||'')}</td><td><span class="pill ${esc(x.status)}">${esc(x.status)}</span></td><td>${x.attempts}</td><td class="long" title="${esc(x.error_message||'')}">${esc(x.error_message||'')}</td></tr>`).join('')}</tbody></table>`}
-$('refreshBtn').onclick=refresh;$('cancelBtn').onclick=async()=>{if(jobId&&confirm('Yêu cầu dừng job?')){await api(`/api/jobs/${jobId}/cancel`,{method:'POST'});refresh()}};
-$('retryBtn').onclick=async()=>{try{const r=await api(`/api/jobs/${jobId}/retry-failed`,{method:'POST'});jobId=r.job.id;alert(`Job mới sẽ chạy lại toàn bộ các dòng trong file.`);if(!pollTimer)pollTimer=setInterval(refresh,1500);refresh()}catch(e){alert(e.message)}};
-$('exportBtn').onclick=()=>{if(jobId)location.href=`/api/jobs/${jobId}/workbook.xlsx`};init();
-</script>
-</body>
+    </main>
+    <script>
+      let uploadId = null,
+        jobId = null,
+        pollTimer = null;
+      const $ = (id) => document.getElementById(id);
+      function msg(el, text, kind = "") {
+        el.textContent = text;
+        el.className = "notice " + kind;
+      }
+      function hide(el) {
+        el.classList.add("hidden");
+      }
+      function show(el) {
+        el.classList.remove("hidden");
+      }
+      function esc(v) {
+        return String(v ?? "").replace(
+          /[&<>"']/g,
+          (c) =>
+            ({
+              "&": "&amp;",
+              "<": "&lt;",
+              ">": "&gt;",
+              '"': "&quot;",
+              "'": "&#39;",
+            })[c],
+        );
+      }
+      function norm(v) {
+        return String(v || "")
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "")
+          .replace(/đ/g, "d")
+          .replace(/Đ/g, "D")
+          .replace(/\s+/g, " ")
+          .trim()
+          .toLowerCase();
+      }
+      function ruleFor(title, row = "") {
+        const n = norm(title),
+          r = norm(row);
+        if (n.includes("ho va ten"))
+          return { label: "Excel → Họ và tên", value: null };
+        if (n.includes("nam sinh"))
+          return { label: "Excel → Ngày sinh", value: null };
+        if (n.includes("nghe nghiep"))
+          return { label: "Cố định: Tự do", value: "Tự do" };
+        if (n.includes("phuong tien thuong su dung"))
+          return { label: "Cố định: Xe máy", value: "Xe máy" };
+        if (n.includes("don vi to chuc"))
+          return {
+            label: "Cố định: phường Thành Nam",
+            value: "phường Thành Nam",
+          };
+        if (n.includes("sdt nguoi duoc khao sat"))
+          return { label: "Excel → SĐT; lỗi thì sinh SĐT random", value: null };
+        if (n.includes("nam duoc quy dinh"))
+          return { label: "Cố định: Biết rõ", value: "Biết rõ" };
+        if (n.includes("thuong xuyen thuc hien cac noi dung")) {
+          if (r.includes("quan sat, bat tin hieu"))
+            return {
+              label: "80% Thường xuyên · 20% Thỉnh thoảng",
+              value: null,
+            };
+          return { label: "Cố định: Thường xuyên", value: "Thường xuyên" };
+        }
+        if (n.includes("cam dieu khien phuong tien sau khi su dung ruou bia"))
+          return { label: "Cố định: Có", value: "Có" };
+        if (n.includes("danh gia tinh hinh ttatgt"))
+          return { label: "Random: Tốt / Cơ bản ổn định", value: null };
+        if (n.includes("co the bi xu ly hinh su"))
+          return { label: "Cố định: Có biết", value: "Có biết" };
+        if (n.includes("xem clip tai nan giao thong thuc te"))
+          return { label: "50% Rất hiệu quả · 50% Có hiệu quả", value: null };
+        if (n.includes("co de xuat gi"))
+          return { label: "Cố định: Không", value: "Không" };
+        return { label: "Random 1 option hợp lệ", value: null };
+      }
+      function renderFormPreview(data) {
+        $("formPreviewMeta").innerHTML =
+          `<span class="pill">${data.question_count} câu hỏi</span><span class="pill">${data.entry_count} entry</span><span class="pill">${data.required_entry_count} bắt buộc</span><span class="pill">Schema ${esc(data.schema_hash.slice(0, 12))}…</span>`;
+        $("formPreview").innerHTML = data.questions
+          .map((q, index) => {
+            const required = q.entries.some((e) => e.required),
+              baseRule = ruleFor(q.title),
+              entryIds = q.entries.map((e) => `entry.${e.id}`).join(", ");
+            let body = "";
+            if (q.type === 0 || q.type === 1) {
+              body = `<div class="rule">${esc(baseRule.label)}</div><div class="fake-input">${esc(baseRule.value || "Giá trị sẽ được dựng theo từng record")}</div>`;
+            } else if (q.type === 3) {
+              const options = q.entries[0]?.options || [];
+              body = `<div class="rule">${esc(baseRule.label)}</div><details><summary>${esc(baseRule.value || "Xem danh sách option")}</summary><div class="dropdown-options">${options.map((o) => `<div>${baseRule.value && norm(o) === norm(baseRule.value) ? "✓ " : ""}${esc(o)}</div>`).join("")}</div></details>`;
+            } else if (q.type === 2) {
+              const options = q.entries[0]?.options || [];
+              body = `<div class="rule">${esc(baseRule.label)}</div><div class="choices">${options.map((o) => `<div class="choice"><span class="dot ${baseRule.value && norm(o) === norm(baseRule.value) ? "on" : ""}"></span><span>${esc(o)}</span></div>`).join("")}</div>`;
+            } else if (q.type === 7) {
+              const options = q.entries[0]?.options || [];
+              body = `<div class="grid-preview"><table><thead><tr><th>Nội dung</th>${options.map((o) => `<th>${esc(o)}</th>`).join("")}</tr></thead><tbody>${q.entries
+                .map((e) => {
+                  const rr = ruleFor(q.title, e.row_label);
+                  return `<tr><td>${esc(e.row_label)}<span class="rowrule">${esc(rr.label)}</span></td>${e.options.map((o) => `<td><span class="dot ${rr.value && norm(o) === norm(rr.value) ? "on" : ""}"></span></td>`).join("")}</tr>`;
+                })
+                .join("")}</tbody></table></div>`;
+            } else body = `<div class="rule">${esc(baseRule.label)}</div>`;
+            return `<article class="qcard"><div class="qhead"><div><div class="qtitle">${index + 1}. ${esc(q.title)} ${required ? '<span class="req">*</span>' : ""}</div><div class="qmeta">type ${q.type} · ${esc(entryIds)}</div></div><span class="pill">${q.entries.length} entry</span></div>${body}</article>`;
+          })
+          .join("");
+        show($("formPreviewPanel"));
+      }
+      async function api(url, options = {}) {
+        const r = await fetch(url, options);
+        let body = {};
+        try {
+          body = await r.json();
+        } catch {}
+        if (!r.ok) throw new Error(body.detail || `HTTP ${r.status}`);
+        return body;
+      }
+      async function init() {
+        const c = await api("/api/config");
+        $("formUrl").value = c.default_form_url;
+        $("concurrency").value = c.default_concurrency;
+        $("recordsPerMinute").value = c.default_records_per_minute;
+        syncSpeedHint();
+      }
+      function syncRunButton() {
+        if ($("dryRun").checked) {
+          $("startBtn").textContent = "Kiểm tra payload — không gửi";
+          $("startBtn").classList.remove("danger");
+        } else {
+          $("startBtn").textContent = "Gửi câu trả lời thật";
+          $("startBtn").classList.add("danger");
+        }
+      }
+      $("dryRun").onchange = syncRunButton;
+      syncRunButton();
+      function syncSpeedHint() {
+        const rpm = Math.max(1, Number($("recordsPerMinute").value) || 1),
+          base = 60 / rpm,
+          option = $("sheet").selectedOptions[0],
+          rows = option ? Number(option.dataset.rows) : 0,
+          randomOn = $("randomDelay").checked,
+          min = Math.max(0, Number($("delayMin").value) || 0),
+          max = Math.max(min, Number($("delayMax").value) || 0),
+          average = randomOn ? Math.max(base, (min + max) / 2) : base,
+          duration = (rows * average) / 60;
+        let estimate = "";
+        if (rows) {
+          estimate = ` Ước tính khoảng ${duration < 1 ? Math.ceil(duration * 60) + " giây" : duration.toFixed(1) + " phút"} cho ${rows} record.`;
+        }
+        const interval = randomOn
+          ? `random ${Math.max(base, min).toFixed(1)}–${Math.max(base, max).toFixed(1)} giây`
+          : `mỗi ${base.toFixed(base < 1 ? 2 : 1)} giây`;
+        $("speedHint").textContent =
+          `Tối đa ${rpm} record/phút; khoảng gửi thực tế ${interval}.${estimate}`;
+      }
+      function syncRandomDelay() {
+        $("randomDelayFields").classList.toggle(
+          "hidden",
+          !$("randomDelay").checked,
+        );
+        syncSpeedHint();
+      }
+      $("recordsPerMinute").oninput = syncSpeedHint;
+      $("sheet").onchange = syncSpeedHint;
+      $("randomDelay").onchange = syncRandomDelay;
+      $("delayMin").oninput = syncSpeedHint;
+      $("delayMax").oninput = syncSpeedHint;
+      syncRandomDelay();
+      function useWorkbook(r) {
+        uploadId = r.upload.id;
+        $("sheet").innerHTML = r.sheets
+          .map(
+            (s) =>
+              `<option value="${esc(s.name)}" data-rows="${Math.max(0, s.max_row - 1)}">${esc(s.name)} — ${s.max_row - 1} dòng</option>`,
+          )
+          .join("");
+        show($("sheetArea"));
+        $("startBtn").disabled = false;
+        syncSpeedHint();
+        const target = r.upload.direct_file
+          ? `File gốc: ${r.upload.local_path}`
+          : `Bản upload: ${r.upload.original_name}`;
+        msg($("uploadMsg"), `${target} · ${r.sheets.length} sheet.`, "ok");
+      }
+      $("directFileBtn").onclick = async () => {
+        show($("uploadMsg"));
+        msg($("uploadMsg"), "Đang mở hộp thoại Windows...");
+        try {
+          const r = await api("/api/local-files/select", { method: "POST" });
+          useWorkbook(r);
+        } catch (e) {
+          msg($("uploadMsg"), e.message, "error");
+        }
+      };
+      $("uploadBtn").onclick = async () => {
+        const f = $("file").files[0];
+        if (!f) return msg($("uploadMsg"), "Chọn file .xlsx trước.", "error");
+        show($("uploadMsg"));
+        msg($("uploadMsg"), "Đang upload bản sao...");
+        try {
+          const fd = new FormData();
+          fd.append("file", f);
+          const r = await api("/api/uploads", { method: "POST", body: fd });
+          useWorkbook(r);
+        } catch (e) {
+          msg($("uploadMsg"), e.message, "error");
+        }
+      };
+      $("previewBtn").onclick = async () => {
+        try {
+          const r = await api(
+            `/api/uploads/${uploadId}/preview?sheet=${encodeURIComponent($("sheet").value)}&limit=10`,
+          );
+          $("previewMeta").textContent =
+            `${r.total} record · hiển thị 10 dòng đầu`;
+          const headers = ["_row", ...r.headers];
+          $("previewTable").innerHTML =
+            `<table><thead><tr>${headers.map((h) => `<th>${esc(h)}</th>`).join("")}</tr></thead><tbody>${r.rows.map((row) => `<tr>${headers.map((h) => `<td>${esc(h === "_row" ? row.row_number : row[h])}</td>`).join("")}</tr>`).join("")}</tbody></table>`;
+          show($("previewPanel"));
+        } catch (e) {
+          alert(e.message);
+        }
+      };
+      $("inspectBtn").onclick = async () => {
+        show($("formMsg"));
+        msg($("formMsg"), "Đang đọc schema Form...");
+        try {
+          const r = await api(
+            `/api/form/inspect?url=${encodeURIComponent($("formUrl").value)}`,
+          );
+          msg(
+            $("formMsg"),
+            `Form OK: ${r.question_count} câu hỏi, ${r.entry_count} entry, ${r.required_entry_count} bắt buộc. Schema ${r.schema_hash.slice(0, 10)}…`,
+            "ok",
+          );
+          renderFormPreview(r);
+          $("formPreviewPanel").scrollIntoView({
+            behavior: "smooth",
+            block: "start",
+          });
+        } catch (e) {
+          hide($("formPreviewPanel"));
+          msg($("formMsg"), e.message, "error");
+        }
+      };
+      $("startBtn").onclick = async () => {
+        if (
+          !$("dryRun").checked &&
+          !confirm(
+            "DRY-RUN đang tắt. Tool sẽ gửi dữ liệu thật vào Google Form theo tốc độ và random delay đã chọn. Tiếp tục?",
+          )
+        )
+          return;
+        try {
+          const r = await api("/api/jobs", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              upload_id: uploadId,
+              sheet_name: $("sheet").value,
+              form_url: $("formUrl").value,
+              concurrency: Number($("concurrency").value),
+              records_per_minute: Number($("recordsPerMinute").value),
+              random_delay: $("randomDelay").checked,
+              delay_min_seconds: Number($("delayMin").value),
+              delay_max_seconds: Number($("delayMax").value),
+              dry_run: $("dryRun").checked,
+            }),
+          });
+          jobId = r.job.id;
+          show($("jobPanel"));
+          await refresh();
+          pollTimer = setInterval(refresh, 1500);
+        } catch (e) {
+          alert(e.message);
+        }
+      };
+      async function refresh() {
+        if (!jobId) return;
+        try {
+          const r = await api(`/api/jobs/${jobId}`),
+            j = r.job;
+          $("jobStatus").textContent = j.status;
+          $("jobStatus").className = "pill " + j.status;
+          const delay = j.random_delay
+            ? ` · random ${j.delay_min_seconds}–${j.delay_max_seconds}s`
+            : "";
+          $("jobMeta").textContent =
+            `Job ${j.id.slice(0, 8)} · sheet ${j.sheet_name} · ${j.dry_run ? "DRY-RUN" : "LIVE"} · ${j.concurrency} luồng · ${j.records_per_minute} record/phút${delay}`;
+          for (const [id, key] of [
+            ["sTotal", "total"],
+            ["sProcessed", "processed"],
+            ["sSuccess", "success"],
+            ["sFailed", "failed"],
+            ["sPhones", "generated_phones"],
+          ])
+            $(id).textContent = j[key] || 0;
+          $("progressBar").style.width =
+            (j.total ? Math.round((100 * j.processed) / j.total) : 0) + "%";
+          if (j.last_error) {
+            show($("jobError"));
+            msg($("jobError"), j.last_error, "error");
+          } else hide($("jobError"));
+          await loadRecords();
+          if (
+            !j.active &&
+            [
+              "COMPLETE",
+              "COMPLETE_WITH_ERRORS",
+              "DRY_RUN_COMPLETE",
+              "JOB_FAILED",
+              "CANCELED",
+            ].includes(j.status)
+          ) {
+            clearInterval(pollTimer);
+            pollTimer = null;
+          }
+        } catch (e) {
+          console.error(e);
+        }
+      }
+      async function loadRecords() {
+        const r = await api(`/api/jobs/${jobId}/records?limit=1000`);
+        const rows = r.records.slice().reverse();
+        $("recordsTitle").textContent =
+          `Record gần nhất · ${r.records.length} record đang hiển thị`;
+        $("recordsTable").innerHTML =
+          `<table><thead><tr><th>Excel row</th><th>STT</th><th>Họ và tên</th><th>SĐT gửi</th><th>Status</th><th>Attempts</th><th>Lỗi</th></tr></thead><tbody>${rows.map((x) => `<tr><td>${x.row_number}</td><td>${esc(x.source.STT || "")}</td><td>${esc(x.source["Họ và tên"] || "")}</td><td>${esc(x.submitted_phone || "")}</td><td><span class="pill ${esc(x.status)}">${esc(x.status)}</span></td><td>${x.attempts}</td><td class="long" title="${esc(x.error_message || "")}">${esc(x.error_message || "")}</td></tr>`).join("")}</tbody></table>`;
+      }
+      $("refreshBtn").onclick = refresh;
+      $("cancelBtn").onclick = async () => {
+        if (jobId && confirm("Yêu cầu dừng job?")) {
+          await api(`/api/jobs/${jobId}/cancel`, { method: "POST" });
+          refresh();
+        }
+      };
+      $("retryBtn").onclick = async () => {
+        try {
+          const r = await api(`/api/jobs/${jobId}/retry-failed`, {
+            method: "POST",
+          });
+          jobId = r.job.id;
+          alert(`Job mới sẽ chạy lại toàn bộ các dòng trong file.`);
+          if (!pollTimer) pollTimer = setInterval(refresh, 1500);
+          refresh();
+        } catch (e) {
+          alert(e.message);
+        }
+      };
+      $("exportBtn").onclick = () => {
+        if (jobId) location.href = `/api/jobs/${jobId}/workbook.xlsx`;
+      };
+      init();
+    </script>
+  </body>
 </html>
